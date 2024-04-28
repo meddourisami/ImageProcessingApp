@@ -13,11 +13,13 @@ class ImageProcessingApp(QMainWindow):
 
         # Widgets
         self.image_label = QLabel()
+        self.contours_label = QLabel()
         self.load_button = QPushButton("Load Image")
         self.gray_button = QPushButton("Convert to Grayscale")
         self.contrast_button = QPushButton("Adjust Contrast")
         self.brightness_button = QPushButton("Brightness")
         self.filter_button = QPushButton("Apply Filter")
+        self.contours_detection_button = QPushButton("Contours Detection")
 
         self.contrast_menu = QMenu(self.contrast_button)
         self.increase_contrast_action = self.contrast_menu.addAction("+ Increase Contrast")
@@ -34,16 +36,19 @@ class ImageProcessingApp(QMainWindow):
         self.filter_median_action = self.filter_menu.addAction("apply median filter")
         self.filter_min_action = self.filter_menu.addAction("apply min filter")
         self.filter_max_action = self.filter_menu.addAction("apply max filter")
+        self.filter_canny_edges_action = self.filter_menu.addAction("apply canny edges filter")
         self.filter_button.setMenu(self.filter_menu)
 
         # Layout
         layout = QVBoxLayout()
         layout.addWidget(self.image_label)
+        layout.addWidget(self.contours_label)
         layout.addWidget(self.load_button)
         layout.addWidget(self.gray_button)
         layout.addWidget(self.contrast_button)
         layout.addWidget(self.brightness_button)
         layout.addWidget(self.filter_button)
+        layout.addWidget(self.contours_detection_button)
 
         central_widget = QWidget()
         central_widget.setLayout(layout)
@@ -52,15 +57,16 @@ class ImageProcessingApp(QMainWindow):
         # Signals
         self.load_button.clicked.connect(self.load_image)
         self.gray_button.clicked.connect(self.convert_to_grayscale)
+        self.contours_detection_button.clicked.connect(self.contours_detection)
         self.increase_contrast_action.triggered.connect(self.increase_contrast)
         self.decrease_contrast_action.triggered.connect(self.decrease_contrast)
         self.increase_brightness_action.triggered.connect(self.increase_brightness)
         self.decrease_brightness_action.triggered.connect(self.decrease_brightness)
         self.filter_average_action.triggered.connect(self.apply_filter_average)
-        self.filter_average_action.triggered.connect(self.apply_filter_median)
-        self.filter_average_action.triggered.connect(self.apply_filter_min)
-        self.filter_average_action.triggered.connect(self.apply_filter_max)
-
+        self.filter_median_action.triggered.connect(self.apply_filter_median)
+        self.filter_min_action.triggered.connect(self.apply_filter_min)
+        self.filter_max_action.triggered.connect(self.apply_filter_max)
+        self.filter_canny_edges_action.triggered.connect(self.apply_filter_canny_edges)
 
         # Initialize variables
         self.image = None
@@ -74,18 +80,20 @@ class ImageProcessingApp(QMainWindow):
 
     def display_image(self):
         if self.image is not None:
-            height, width, channel = self.image.shape
+            width = self.image.shape[1]
+            height = self.image.shape[0]
             bytes_per_line = 3 * width
-            scale_factor = 1  # Adjust this factor to increase/decrease the size
+            scale_factor = 3  # To adjust this factor to increase/decrease the size
         
-            # Resize the image using OpenCV
-            resized_image = cv.resize(self.image, (width * scale_factor, height * scale_factor))
+            # Resizing the image using OpenCV
+            reseized_image = cv.resize(self.image, (width * scale_factor, height * scale_factor), interpolation= cv.INTER_CUBIC)
         
             # Convert the resized image to a QImage
-            q_img = QImage(resized_image.data, resized_image.shape[1], resized_image.shape[0], resized_image.strides[0], QImage.Format_RGB888).rgbSwapped()
+            q_img = QImage(reseized_image.data, reseized_image.shape[1], reseized_image.shape[0], reseized_image.strides[0], QImage.Format_RGB888).rgbSwapped()
             pixmap = QPixmap.fromImage(q_img)
             #scaled_pixmap = pixmap.scaled(self.image_label.size(), aspectRatioMode=Qt.KeepAspectRatio)
             self.image_label.setPixmap(pixmap)
+            self.image_label.show()
 
     def convert_to_grayscale(self):
         if self.image is not None:
@@ -123,24 +131,37 @@ class ImageProcessingApp(QMainWindow):
 
     def apply_filter_average(self):
         if self.image is not None:
-            kernel = np.ones((5, 5), np.float32) / 25
-            self.image= cv.filter2D(self.image, -1, kernel)
+            self.image= cv.blur(self.image, (3,3))
             self.display_image()
 
     def apply_filter_median(self):
         if self.image is not None:
-            self.image = cv.medianBlur(self.image, 9)
+            self.image = cv.medianBlur(self.image, 3)
             self.display_image()
     
     def apply_filter_min(self):
         if self.image is not None:
-            self.image = cv.erode(self.image, None, iterations=3)
+            self.image = cv.erode(self.image, (7, 7), None, iterations=3)
             self.display_image()
 
-    def apply_filter_max(self):
+    def apply_filter_max(self): 
         if self.image is not None:
-            self.image= cv.dilate(self.image, None, iterations=3)
+            self.image= cv.dilate(self.image, (7, 7), None, iterations=3)
             self.display_image()
+    
+    def apply_filter_canny_edges(self):
+        if self.image is not None:
+            edges = cv.Canny(self.image, 50, 150)
+            self.image = cv.cvtColor(edges, cv.COLOR_GRAY2BGR)
+            self.display_image()
+
+    def contours_detection(self):
+        if self.image is not None:
+            edges = cv.Canny(self.image, 50, 150)
+            self.image = cv.cvtColor(edges, cv.COLOR_GRAY2BGR)
+            contours, hierarchies = cv.findContours(edges, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+            contours_count = "there are "+str(len(contours))+" countours found in the image "
+            self.contours_label.setText(contours_count)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
