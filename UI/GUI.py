@@ -2,9 +2,10 @@ import sys
 import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QFileDialog, QAction
-from PyQt5.QtGui import QPixmap, QImage
+from PyQt5.QtGui import QPixmap, QImage, QPainter
 import cv2 as cv
 import matplotlib.pyplot as plt
+from PyQt5.QtPrintSupport import QPrintDialog, QPrinter
 
 
 class ImageProcessingApp(QMainWindow):
@@ -40,30 +41,39 @@ class ImageProcessingApp(QMainWindow):
         self.load_action.triggered.connect(self.load_image)
         self.save_action = QAction("Save Image", self)
         self.save_action.triggered.connect(self.save_image)
+        self.print_action = QAction("Print Image", self)
+        self.print_action.triggered.connect(self.print_image)
         self.image_menu.addAction(self.load_action)
         self.image_menu.addAction(self.save_action)
+        self.image_menu.addAction(self.print_action)
 
         # Histogram menu actions
         self.histogram_action = QAction("Compute Histogram", self)
         self.histogram_action.triggered.connect(self.histogram_calculation)
         self.color_histogram_action = QAction("Compute Color Histogram ", self)
-        self.color_histogram_action.triggered.connect(self.compute_color_histogram)
+        self.color_histogram_action.triggered.connect(
+            self.compute_color_histogram)
         self.histogram_menu.addAction(self.histogram_action)
         self.histogram_menu.addAction(self.color_histogram_action)
 
         # Filters menu actions
         self.gray_action = QAction("Convert to grayscale", self)
         self.gray_action.triggered.connect(self.convert_to_grayscale)
-        self.apply_filter_average_action = QAction("apply average filter", self)
-        self.apply_filter_average_action.triggered.connect(self.apply_filter_average)
+        self.apply_filter_average_action = QAction(
+            "apply average filter", self)
+        self.apply_filter_average_action.triggered.connect(
+            self.apply_filter_average)
         self.apply_filter_median_action = QAction("apply median filter", self)
-        self.apply_filter_median_action.triggered.connect(self.apply_filter_median)
+        self.apply_filter_median_action.triggered.connect(
+            self.apply_filter_median)
         self.apply_filter_min_action = QAction("apply min filter", self)
         self.apply_filter_min_action.triggered.connect(self.apply_filter_min)
         self.apply_filter_max_action = QAction("apply max filter", self)
         self.apply_filter_max_action.triggered.connect(self.apply_filter_max)
-        self.apply_filter_canny_edges_action = QAction("apply canny edges filter", self)
-        self.apply_filter_canny_edges_action.triggered.connect(self.apply_filter_canny_edges)
+        self.apply_filter_canny_edges_action = QAction(
+            "apply canny edges filter", self)
+        self.apply_filter_canny_edges_action.triggered.connect(
+            self.apply_filter_canny_edges)
         self.filters_menu.addAction(self.gray_action)
         self.filters_menu.addAction(self.apply_filter_average_action)
         self.filters_menu.addAction(self.apply_filter_median_action)
@@ -72,10 +82,14 @@ class ImageProcessingApp(QMainWindow):
         self.filters_menu.addAction(self.apply_filter_canny_edges_action)
 
         # Brightness menu actions
-        self.increase_brightness_action = QAction("+ Increase brightness", self)
-        self.increase_brightness_action.triggered.connect(self.increase_brightness)
-        self.decrease_brightness_action = QAction("- Decrease brightness", self)
-        self.decrease_brightness_action.triggered.connect(self.decrease_brightness)
+        self.increase_brightness_action = QAction(
+            "+ Increase brightness", self)
+        self.increase_brightness_action.triggered.connect(
+            self.increase_brightness)
+        self.decrease_brightness_action = QAction(
+            "- Decrease brightness", self)
+        self.decrease_brightness_action.triggered.connect(
+            self.decrease_brightness)
         self.brightness_menu.addAction(self.increase_brightness_action)
         self.brightness_menu.addAction(self.decrease_brightness_action)
 
@@ -87,9 +101,10 @@ class ImageProcessingApp(QMainWindow):
         self.contrast_menu.addAction(self.increase_contrast_action)
         self.contrast_menu.addAction(self.decrease_contrast_action)
 
-        # Contours menu actions 
+        # Contours menu actions
         self.contours_detection_action = QAction("Contours detection", self)
-        self.contours_detection_action.triggered.connect(self.contours_detection)
+        self.contours_detection_action.triggered.connect(
+            self.contours_detection)
         self.contours_menu.addAction(self.contours_detection_action)
 
         # Initialize variables
@@ -221,6 +236,20 @@ class ImageProcessingApp(QMainWindow):
                 self, "Save Image", "", "Image Files (*.png *.jpg)")
             if file_path:
                 cv.imwrite(file_path, self.image)
+
+    def print_image(self):
+        if self.image is not None:
+            printer = QPrinter()
+            dialog = QPrintDialog(printer, self)
+            if dialog.exec_() == QPrintDialog.Accepted:
+                painter = QPainter(printer)
+                rect = painter.viewport()
+                size = self.image_label.pixmap().size()
+                size.scale(rect.size(), Qt.KeepAspectRatio)
+                painter.setViewport(rect.x(), rect.y(),
+                                    size.width(), size.height())
+                painter.setWindow(self.image_label.pixmap().rect())
+                painter.drawPixmap(0, 0, self.image_label.pixmap())
 
 
 if __name__ == "__main__":
