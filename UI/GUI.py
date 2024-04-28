@@ -34,7 +34,7 @@ class ImageProcessingApp(QMainWindow):
         self.filters_menu = self.menu_bar.addMenu("Filters")
         self.brightness_menu = self.menu_bar.addMenu("brightness")
         self.contrast_menu = self.menu_bar.addMenu("contrast")
-        self.contours_menu = self.menu_bar.addMenu("contours")
+        self.Other_Functions_menu = self.menu_bar.addMenu("Other Functions")
 
         # Image menu actions
         self.load_action = QAction("Load Image", self)
@@ -101,11 +101,15 @@ class ImageProcessingApp(QMainWindow):
         self.contrast_menu.addAction(self.increase_contrast_action)
         self.contrast_menu.addAction(self.decrease_contrast_action)
 
-        # Contours menu actions
+        # Other functions menu actions
         self.contours_detection_action = QAction("Contours detection", self)
         self.contours_detection_action.triggered.connect(
             self.contours_detection)
-        self.contours_menu.addAction(self.contours_detection_action)
+        self.segment_image_action = QAction("Segment image", self)
+        self.segment_image_action.triggered.connect(
+            self.segment_image)
+        self.Other_Functions_menu.addAction(self.contours_detection_action)
+        self.Other_Functions_menu.addAction(self.segment_image_action)
 
         # Initialize variables
         self.image = None
@@ -250,6 +254,14 @@ class ImageProcessingApp(QMainWindow):
                                     size.width(), size.height())
                 painter.setWindow(self.image_label.pixmap().rect())
                 painter.drawPixmap(0, 0, self.image_label.pixmap())
+                
+    #simple segmentation
+    def segment_image(self):
+        if self.image is not None:
+            gray_image = cv.cvtColor(self.image, cv.COLOR_BGR2GRAY)
+            ret, segmented_image = cv.threshold(gray_image, 127, 255, cv.THRESH_BINARY)
+            self.image = cv.cvtColor(segmented_image, cv.COLOR_GRAY2BGR)
+            self.display_image()
 
 
 if __name__ == "__main__":
