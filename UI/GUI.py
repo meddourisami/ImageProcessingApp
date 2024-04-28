@@ -4,6 +4,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QWidget, QFileDialog, QMenu
 from PyQt5.QtGui import QPixmap, QImage
 import cv2 as cv
+import matplotlib.pyplot as plt
 
 class ImageProcessingApp(QMainWindow):
     def __init__(self):
@@ -20,6 +21,9 @@ class ImageProcessingApp(QMainWindow):
         self.brightness_button = QPushButton("Brightness")
         self.filter_button = QPushButton("Apply Filter")
         self.contours_detection_button = QPushButton("Contours Detection")
+        self.histogram_button = QPushButton("Histogram")
+        self.save_button = QPushButton("Save Image")
+
 
         self.contrast_menu = QMenu(self.contrast_button)
         self.increase_contrast_action = self.contrast_menu.addAction("+ Increase Contrast")
@@ -39,6 +43,11 @@ class ImageProcessingApp(QMainWindow):
         self.filter_canny_edges_action = self.filter_menu.addAction("apply canny edges filter")
         self.filter_button.setMenu(self.filter_menu)
 
+        self.histogram_menu = QMenu(self.histogram_button)
+        self.compute_histogram_action = self.histogram_menu.addAction("histogram computation")
+        self.compute_color_histogram_action = self.histogram_menu.addAction("Color histogram")
+        self.histogram_button.setMenu(self.histogram_menu)
+
         # Layout
         layout = QVBoxLayout()
         layout.addWidget(self.image_label)
@@ -49,6 +58,8 @@ class ImageProcessingApp(QMainWindow):
         layout.addWidget(self.brightness_button)
         layout.addWidget(self.filter_button)
         layout.addWidget(self.contours_detection_button)
+        layout.addWidget(self.histogram_button)
+        layout.addWidget(self.save_button)
 
         central_widget = QWidget()
         central_widget.setLayout(layout)
@@ -58,6 +69,8 @@ class ImageProcessingApp(QMainWindow):
         self.load_button.clicked.connect(self.load_image)
         self.gray_button.clicked.connect(self.convert_to_grayscale)
         self.contours_detection_button.clicked.connect(self.contours_detection)
+        self.save_button.clicked.connect(self.save_image)
+
         self.increase_contrast_action.triggered.connect(self.increase_contrast)
         self.decrease_contrast_action.triggered.connect(self.decrease_contrast)
         self.increase_brightness_action.triggered.connect(self.increase_brightness)
@@ -67,6 +80,8 @@ class ImageProcessingApp(QMainWindow):
         self.filter_min_action.triggered.connect(self.apply_filter_min)
         self.filter_max_action.triggered.connect(self.apply_filter_max)
         self.filter_canny_edges_action.triggered.connect(self.apply_filter_canny_edges)
+        self.compute_histogram_action.triggered.connect(self.histogram_calculation)
+        self.compute_color_histogram_action.triggered.connect(self.compute_color_histogram)
 
         # Initialize variables
         self.image = None
@@ -162,6 +177,36 @@ class ImageProcessingApp(QMainWindow):
             contours, hierarchies = cv.findContours(edges, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
             contours_count = "there are "+str(len(contours))+" countours found in the image "
             self.contours_label.setText(contours_count)
+    
+    def histogram_calculation(self):
+        if self.image is not None:
+            gray_image = cv.cvtColor(self.image, cv.COLOR_BGR2GRAY)
+            hist = cv.calcHist([gray_image], [0], None, [256], [0, 256])
+            plt.plot(hist)
+            plt.xlim([0, 256])
+            plt.xlabel('Pixel Value')
+            plt.ylabel('Frequency')
+            plt.title('Histogram')
+            plt.show()
+
+    def compute_color_histogram(self):
+        if self.image is not None:
+            color = ('b', 'g', 'r')
+            for i, col in enumerate(color):
+                hist = cv.calcHist([self.image], [i], None, [256], [0, 256])
+                plt.plot(hist, color=col)
+                plt.xlim([0, 256])
+                plt.xlabel('Pixel Value')
+                plt.ylabel('Frequency')
+                plt.title('Color Histogram')
+            plt.show()
+
+    def save_image(self):
+        if self.image is not None:
+            file_dialog = QFileDialog()
+            file_path, _ = file_dialog.getSaveFileName(self, "Save Image", "", "Image Files (*.png *.jpg)")
+            if file_path:
+                cv.imwrite(file_path, self.image)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
